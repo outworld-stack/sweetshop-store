@@ -31,7 +31,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY backend/package.json backend/bun.lock ./
-# RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm install --omit=dev --no-audit --no-fund
 COPY --from=backend-build /app/dist ./dist
 COPY --from=frontend-build /app/frontend/dist ./public
 
