@@ -76,7 +76,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # کپی فقط package.json و bun.lockb (نه package-lock.json)
-COPY backend/package.json backend/bun.lockb ./
+COPY backend/package.json backend/bun.lock ./
 
 # نصب فقط وابستگی‌های production با استفاده از قفل
 RUN bun install --production --frozen-lockfile && bun cache clean
