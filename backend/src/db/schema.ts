@@ -1,6 +1,5 @@
 import { pgTable, text, integer, boolean, jsonb, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { v1 as uuidv1 } from 'uuid';
 
 
 export type OrderStatus = "pending" | "paid" | "failed";
@@ -13,7 +12,7 @@ export type CheckoutSessionLine = {
 }
 
 export const users = pgTable('users', {
-    id: uuid('id').primaryKey().$defaultFn(() => uuidv1()),
+    id: uuid('id').defaultRandom().primaryKey(),
     clerckUserId: text('clerck_user_id').notNull().unique(),
     email: text('email').notNull().default(""),
     displayName: text('display_name'),
