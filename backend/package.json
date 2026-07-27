@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "db:push":"drizzle-kit push"
+    "db:push": "drizzle-kit push"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +19,7 @@
     "@imagekit/nodejs": "7.4.0",
     "@sentry/node": "10.48.0",
     "@sentry/profiling-node": "10.48.0",
+    "@types/cors": "^2.8.19",
     "@types/express": "5.0.6",
     "@types/node": "22.10.10",
     "@types/pg": "8.11.10",
