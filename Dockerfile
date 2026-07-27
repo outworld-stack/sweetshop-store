@@ -42,7 +42,6 @@
 # CMD ["node", "dist/index.js"]
 
 
-////////////////////////
 
 
 # monolith
