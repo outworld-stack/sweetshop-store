@@ -17,6 +17,7 @@
     "@clerk/backend": "3.2.8",
     "@clerk/express": "2.1.0",
     "@imagekit/nodejs": "7.4.0",
+    "@sentry-internal/node-cpu-profiler": "^2.4.1",
     "@sentry/node": "10.48.0",
     "@sentry/profiling-node": "10.48.0",
     "@types/cors": "^2.8.19",
