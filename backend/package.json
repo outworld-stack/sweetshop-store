@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch --import ./src/instrument.ts src/index.ts",
-    "build": "tsc",
-    "start": "node --import ./src/instrument.ts  dist/index.js",
+    "dev": "bun --watch --import ./src/instrument.ts src/index.ts",
+    "build": "bun tsc",
+    "start": "bun --import ./src/instrument.ts  dist/index.js",
     "db:push": "drizzle-kit push"
   },
   "keywords": [],

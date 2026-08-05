@@ -8,6 +8,11 @@ import { eq } from "drizzle-orm";
 
 
 export async function clerkWebhookHandler(req: Request, res: Response) {
+    console.log("=".repeat(50));
+    console.log("🔔 Webhook received!");
+    console.log("📋 Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("📦 Body:", req.body);
+    console.log("=".repeat(50));
     const env = getEnv();
 
     try {

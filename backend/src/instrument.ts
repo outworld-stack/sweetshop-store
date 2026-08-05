@@ -11,10 +11,10 @@ if (dsn) {
     Sentry.init({
         dsn: dsn,
         environment: process.env.NODE_ENV ?? "development",
-        integrations: [nodeProfilingIntegration()],
+        // integrations: [nodeProfilingIntegration()],
         enableLogs: true,
-        tracesSampleRate: 1.0,
-        profileSessionSampleRate: 1.0,
+        // tracesSampleRate: 1.0,
+        // profileSessionSampleRate: 1.0,
         profileLifecycle: "trace",
         sendDefaultPii: true,
     });
