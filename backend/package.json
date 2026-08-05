@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "bun --watch --import ./src/instrument.ts src/index.ts",
-    "build": "bun tsc",
+    "build": "tsc",
     "start": "bun --import ./src/instrument.ts  dist/index.js",
     "db:push": "drizzle-kit push"
   },
