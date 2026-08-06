@@ -1,4 +1,22 @@
 @import "tailwindcss";
 @plugin "daisyui"{
-  themes: corporate --default;
+  themes: acid --default;
+};
+
+
+@font-face {
+  font-family: 'Samim';
+  src: url('../font/Samim-FD.woff2') format('woff2');
+  font-display: swap;
+};
+@font-face {
+  font-family: 'SamimBold';
+  src: url('../font/Samim-Bold-FD.woff2') format('woff2');
+  font-display: swap;
+};
+
+
+@theme{
+  --font-samim:"Samim";
+  --font-samimBold:"SamimBold";
 }
