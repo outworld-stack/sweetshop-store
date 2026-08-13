@@ -12,7 +12,7 @@ import { SentryUserSync } from './components/SentryUserSync.jsx';
 
 const queryClient = new QueryClient();
 
-const apiBase = import.meta.VITE_API_URL ?? "";
+const apiBase = import.meta.env.VITE_API_URL ?? "";
 const tracePropagationTargets =
   apiBase.length > 0 ? [apiBase] : typeof window !== "undefined" ?
     [window.location.origin] : [];

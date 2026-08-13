@@ -17,7 +17,7 @@ export async function apiFetch(path, options = {}) {
     }
 
     let res;
-    try {
+    try {               
         res = await fetch(`${base}${path}`, {
             method, headers,
             body: body !== undefined ? JSON.stringify(body) : undefined
