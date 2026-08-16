@@ -23,7 +23,10 @@ function OrdersPage() {
     return (
       <PageError message="لطفا بعدا تلاش کنید." action={{ to: "/", label: "برگشت به فروشگاه" }} />
     );
-  }  
+  };
+
+  console.log(orders);
+  
 
   return (
     <div className="text-left">

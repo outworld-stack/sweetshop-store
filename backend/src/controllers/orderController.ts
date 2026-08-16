@@ -1,150 +1,162 @@
 import { getAuth } from "@clerk/express";
-import { Request, Response, NextFunction } from "express";
+import type { NextFunction, Response, Request } from "express";
 import { getLocalUser } from "../lib/users";
 import { isStaff } from "../lib/roles";
 import { db } from "../db";
-import { asc, desc, eq, inArray } from "drizzle-orm";
 import { orderItems, orders, products, users } from "../db/schema";
-import { getEnv } from "../lib/env";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { getStreamChatServer, streamChatDisplayName, streamUserId } from "../lib/stream";
-
+import { getEnv } from "../lib/env";
 
 const env = getEnv();
 
-export async function listorders(req: Request, res: Response, next: NextFunction) {
+export async function listOrders(req: Request, res: Response, next: NextFunction) {
     try {
         const { userId, isAuthenticated } = getAuth(req);
-        if (!isAuthenticated) {
-            res.status(401).json({ message: "Unauthorized" });
+        if (!isAuthenticated || !userId) {
+            res.status(401).json({ error: "Unauthorized" });
             return;
-        };
+        }
+
         const localUser = await getLocalUser(userId);
         if (!localUser) {
-            res.status(503).json({ message: "Account not synced yet" });
+            res.status(503).json({ error: "Account not synced yet" });
             return;
-        };
+        }
 
-        const rows = isStaff(localUser.role) ? await db.select().from(orders).orderBy(desc(orders.createdAt)) : await db.select().from(orders).where(eq(orders.userId, localUser.id)).orderBy(desc(orders.createdAt));
+        const rows = isStaff(localUser.role)
+            ? await db.select().from(orders).orderBy(desc(orders.createdAt))
+            : await db
+                .select()
+                .from(orders)
+                .where(eq(orders.userId, localUser.id))
+                .orderBy(desc(orders.createdAt));
 
-        const orderIds = rows.map((row) => row.id);
+        const orderIds = rows.map((r) => r.id);
         const previewByOrder = new Map();
 
         if (orderIds.length > 0) {
-            const itemRows = await db.select({
-                orderId: orderItems.orderId,
-                quantity: orderItems.quantity,
-                name: products.name,
-                slug: products.slug,
-                imageUrl: products.imageUrl,
-            })
+            const itemRows = await db
+                .select({
+                    orderId: orderItems.orderId,
+                    quantity: orderItems.quantity,
+                    name: products.name,
+                    slug: products.slug,
+                    imageUrl: products.imageUrl,
+                })
                 .from(orderItems)
                 .innerJoin(products, eq(orderItems.productId, products.id))
                 .where(inArray(orderItems.orderId, orderIds))
-                .orderBy(asc(orderItems.orderId));
+                .orderBy(asc(orderItems.id));
 
             for (const row of itemRows) {
                 const list = previewByOrder.get(row.orderId) ?? [];
                 list.push({
-                    quantity: row.quantity,
                     name: row.name,
                     slug: row.slug,
                     imageUrl: row.imageUrl,
+                    quantity: row.quantity,
                 });
                 previewByOrder.set(row.orderId, list);
             }
+        }
 
-        };
-
-        const ordersPayload = rows.map((row) => ({
-            ...row,
-            previewItems: previewByOrder.get(row.id) ?? [],
+        const ordersPayload = rows.map((o) => ({
+            ...o,
+            previewItems: previewByOrder.get(o.id) ?? [],
         }));
 
-        res.status(200).json({ orders: ordersPayload });
-
-    } catch (error) {
-        next(error);
+        res.json({ orders: ordersPayload });
+    } catch (e) {
+        next(e);
     }
-};
-
+}
 
 export async function getOrder(req: Request, res: Response, next: NextFunction) {
     try {
         const { userId, isAuthenticated } = getAuth(req);
         if (!isAuthenticated || !userId) {
-            res.status(401).json({ message: "Unauthorized" });
+            res.status(401).json({ error: "Unauthorized" });
             return;
-        };
+        }
+
         const localUser = await getLocalUser(userId);
         if (!localUser) {
-            res.status(503).json({ message: "Account not synced yet" });
+            res.status(503).json({ error: "Account not synced yet" });
             return;
-        };
+        }
 
-        const [order] = await db.select().from(orders).where(eq(orders.id, req.params.id as string)).limit(1);
+        const [order] = await db
+            .select()
+            .from(orders)
+            .where(eq(orders.id, req.params.id as string))
+            .limit(1);
 
         if (!order) {
-            res.status(404).json({ error: "Order not found" });
+            res.status(404).json({ error: "Not found" });
             return;
-        };
+        }
 
         const canAccess = order.userId === localUser.id || isStaff(localUser.role);
         if (!canAccess) {
-            res.status(404).json({ error: "not found" });
+            res.status(404).json({ error: "Not found" });
             return;
-        };
+        }
 
-        const items = await db.select({
-            id: orderItems.id,
-            quantity: orderItems.quantity,
-            product: products,
-            unitPriceCents: orderItems.unitPriceCents,
-        })
+        const items = await db
+            .select({
+                id: orderItems.id,
+                quantity: orderItems.quantity,
+                unitPriceCents: orderItems.unitPriceCents,
+                product: products,
+            })
             .from(orderItems)
             .innerJoin(products, eq(orderItems.productId, products.id))
             .where(eq(orderItems.orderId, order.id));
 
-
-        res.status(200).json({ order, items });
-
-    } catch (error) {
-        next(200);
+        res.json({ order, items });
+    } catch (e) {
+        next(e);
     }
-};
+}
 
 export async function createStreamChannel(req: Request, res: Response, next: NextFunction) {
     try {
         const { userId, isAuthenticated } = getAuth(req);
         if (!isAuthenticated || !userId) {
-            res.status(401).json({ message: "Unauthorized" });
+            res.status(401).json({ error: "Unauthorized" });
             return;
-        };
+        }
 
         const server = getStreamChatServer(env);
 
         const localUser = await getLocalUser(userId);
         if (!localUser) {
-            res.status(503).json({ message: "Account not synced yet" });
+            res.status(503).json({ error: "Account not synced yet" });
             return;
-        };
+        }
 
-        const [order] = await db.select().from(orders).where(eq(orders.id, req.params.id as string)).limit(1);
+        const [order] = await db
+            .select()
+            .from(orders)
+            .where(eq(orders.id, req.params.id as string))
+            .limit(1);
 
         if (!order) {
-            res.status(404).json({ error: "Order Not Found" });
+            res.status(404).json({ error: "Not found" });
             return;
-        };
+        }
 
         const isOwner = order.userId === localUser.id;
         if (!isOwner && !isStaff(localUser.role)) {
-            res.status(404).json({ error: "Not Found" });
+            res.status(404).json({ error: "Not found" });
             return;
-        };
+        }
 
         if (order.status !== "paid") {
-            res.status(403).json({ error: "Order Not Paid" });
+            res.status(403).json({ error: "Order must be paid to open support chat" });
             return;
-        };
+        }
 
         const streamChatUserId = streamUserId(userId);
 
@@ -153,8 +165,9 @@ export async function createStreamChannel(req: Request, res: Response, next: Nex
             name: streamChatDisplayName(localUser.role, localUser.displayName, localUser.email),
         });
 
-        const channel = server.channel("messaging", `order-${order.id}`, {
-            name: `Support . order ${order.id.slice(0.8)}`,
+        const channelId = `order-${order.id}`;
+        const channel = server.channel("messaging", channelId, {
+            name: `Support · order ${order.id.slice(0, 8)}`,
             created_by_id: streamChatUserId,
         });
 
@@ -162,48 +175,50 @@ export async function createStreamChannel(req: Request, res: Response, next: Nex
 
         await channel.addMembers([streamChatUserId]);
 
-        res.json({ channelType: "messaging", channelId: `order-${order.id}`, streamUserId: streamChatUserId });
-
-    } catch (error) {
-        next(error);
+        res.json({ channelType: "messaging", channelId, streamUserId: streamChatUserId });
+    } catch (e) {
+        next(e);
     }
-};
-
+}
 
 export async function createVideoInvite(req: Request, res: Response, next: NextFunction) {
     try {
         const { userId, isAuthenticated } = getAuth(req);
         if (!isAuthenticated || !userId) {
-            res.status(401).json({ message: "Unauthorized" });
+            res.status(401).json({ error: "Unauthorized" });
             return;
-        };
+        }
 
         const server = getStreamChatServer(env);
 
         const localUser = await getLocalUser(userId);
         if (!localUser) {
-            res.status(503).json({ message: "Account not synced yet" });
+            res.status(503).json({ error: "Account not synced yet" });
             return;
-        };
+        }
 
         if (!isStaff(localUser.role)) {
-            res.status(403).json({ message: "Forbidden, Only Admin Can Send Video Invites" });
+            res.status(403).json({ error: "Only support or admin can send a video invite" });
             return;
-        };
+        }
 
-        const [order] = await db.select().from(orders).where(eq(orders.id, req.params.id as string)).limit(1);
+        const [order] = await db
+            .select()
+            .from(orders)
+            .where(eq(orders.id, req.params.id as string))
+            .limit(1);
 
         if (!order || order.status !== "paid") {
-            res.status(404).json({ error: "Order Not Found Or Not Paid" });
+            res.status(404).json({ error: "Order not found or not paid" });
             return;
-        };
-
+        }
         if (!order.userId) {
-            res.status(400).json({ error: "Order has no associated user" });
+            res.status(404).json({ error: "Order has no owner" });
             return;
-        };
+        }
 
-        const [owner] = await db.select().from(users).where(eq(users.id, order.userId )).limit(1);
+
+        const [owner] = await db.select().from(users).where(eq(users.id, order.userId)).limit(1);
 
         const customerSid = streamUserId(owner.clerkUserId);
         await server.upsertUser({
@@ -211,26 +226,26 @@ export async function createVideoInvite(req: Request, res: Response, next: NextF
             name: owner.displayName ?? owner.email ?? "Customer",
         });
 
-        const staffStreamUSerId = streamUserId(userId);
-
+        const staffStreamUserId = streamUserId(userId);
         await server.upsertUser({
-            id: staffStreamUSerId,
+            id: staffStreamUserId,
             name: streamChatDisplayName(localUser.role, localUser.displayName, localUser.email),
         });
 
-        const channel = server.channel("messaging", `order-${order.id}`, {
-            name: `Support . order ${order.id.slice(0.8)}`,
+        const channelId = `order-${order.id}`;
+        const channel = server.channel("messaging", channelId, {
+            name: `Support · order ${order.id.slice(0, 8)}`,
             created_by_id: customerSid,
         });
 
         await channel.create();
-        await channel.addMembers([customerSid, staffStreamUSerId]);
+        await channel.addMembers([customerSid, staffStreamUserId]);
 
         const joinUrl = `${env.FRONTEND_URL.replace(/\/+$/, "")}/orders/${order.id}/call`;
 
         await channel.sendMessage({
-            text: `Video Call - tap link to join : ${joinUrl}`,
-            user_id: staffStreamUSerId,
+            text: `Video call — tap Join below (same link for everyone): ${joinUrl}`,
+            user_id: staffStreamUserId,
             custom: {
                 video_invite: true,
                 join_url: joinUrl,
@@ -238,9 +253,7 @@ export async function createVideoInvite(req: Request, res: Response, next: NextF
         });
 
         res.json({ ok: true, joinUrl });
-
-    } catch (error) {
-        next(error);
+    } catch (e) {
+        next(e);
     }
-};
-
+}
