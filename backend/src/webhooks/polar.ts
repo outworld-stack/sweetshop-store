@@ -240,6 +240,10 @@ export async function polarWebhookHandler(req: Request, res: Response) {
   console.log("path:", req.path);
   console.log("raw body length:", req.body instanceof Buffer ? req.body.length : "not buffer");
 
+  console.log("secret length:", env.POLAR_WEBHOOK_SECRET?.length);
+  console.log("secret prefix:", env.POLAR_WEBHOOK_SECRET?.slice(0, 6));
+  console.log("secret has whsec_:", env.POLAR_WEBHOOK_SECRET?.startsWith("whsec_"));
+
   try {
     if (!env.POLAR_WEBHOOK_SECRET) {
       res.status(503).send("Polar webhook secret not set");
@@ -251,7 +255,8 @@ export async function polarWebhookHandler(req: Request, res: Response) {
         ? req.body
         : Buffer.from(String(req.body), "utf-8");
 
-    const wh = new Webhook(env.POLAR_WEBHOOK_SECRET);
+    // const wh = new Webhook(env.POLAR_WEBHOOK_SECRET);
+    const wh = new Webhook(env.POLAR_WEBHOOK_SECRET.replace(/^whsec_/, ''));
 
     const id = headerString(req.headers, "webhook-id");
     const ts = headerString(req.headers, "webhook-timestamp");
