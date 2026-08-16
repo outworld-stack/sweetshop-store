@@ -237,12 +237,6 @@ export async function polarWebhookHandler(req: Request, res: Response) {
   const env = getEnv();
 
   console.log("=== webhook received ===");
-  console.log("path:", req.path);
-  console.log("raw body length:", req.body instanceof Buffer ? req.body.length : "not buffer");
-
-  console.log("secret length:", env.POLAR_WEBHOOK_SECRET?.length);
-  console.log("secret prefix:", env.POLAR_WEBHOOK_SECRET?.slice(0, 6));
-  console.log("secret has whsec_:", env.POLAR_WEBHOOK_SECRET?.startsWith("whsec_"));
 
   try {
     if (!env.POLAR_WEBHOOK_SECRET) {
@@ -250,13 +244,10 @@ export async function polarWebhookHandler(req: Request, res: Response) {
       return;
     }
 
-    const raw =
-      req.body instanceof Buffer
-        ? req.body
-        : Buffer.from(String(req.body), "utf-8");
+    // بدنه خام باید به صورت رشته باشد
+    const rawBody = req.body instanceof Buffer ? req.body.toString("utf-8") : String(req.body);
 
-    // const wh = new Webhook(env.POLAR_WEBHOOK_SECRET);
-    const wh = new Webhook(env.POLAR_WEBHOOK_SECRET.replace(/^whsec_/, ''));
+    const wh = new Webhook(env.POLAR_WEBHOOK_SECRET);
 
     const id = headerString(req.headers, "webhook-id");
     const ts = headerString(req.headers, "webhook-timestamp");
@@ -268,13 +259,13 @@ export async function polarWebhookHandler(req: Request, res: Response) {
       return;
     }
 
-    wh.verify(raw, {
+    wh.verify(rawBody, {
       "webhook-id": id,
       "webhook-timestamp": ts,
       "webhook-signature": sig,
     });
 
-    const event = JSON.parse(raw.toString("utf-8")) as {
+    const event = JSON.parse(rawBody) as {
       type: string;
       data?: Record<string, unknown>;
     };
@@ -290,17 +281,14 @@ export async function polarWebhookHandler(req: Request, res: Response) {
       const checkoutId =
         typeof data.checkout_id === "string" ? data.checkout_id : undefined;
 
-      // اگر قبلاً پردازش شده باشد
       if (await alreadyPaid(polarOrderId, checkoutId)) {
         console.log("duplicate order.paid, skipping");
         res.json({ ok: true, duplicate: true });
         return;
       }
 
-      // اول تلاش میکنیم sessionId را از metadata بخوانیم
       let sessionId = checkoutSessionIdFromMetadata(data);
 
-      // اگر نبود، با checkoutId از جدول checkoutSessions پیدا میکنیم
       if (!sessionId && checkoutId) {
         const [session] = await db
           .select({ id: checkoutSessions.id })
