@@ -4,7 +4,6 @@ import { checkoutSessions, orderItems, orders } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { Webhook } from "standardwebhooks";
-import { log } from "node:console";
 
 
 function headerString(headers: Request["headers"], name: string) {
