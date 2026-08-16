@@ -71,8 +71,8 @@ export async function polarWebhookHandler(req: Request, res: Response) {
       return;
     }
 
-    // 1. دریافت بدنه خام
-    const rawBody = req.body instanceof Buffer ? req.body.toString("utf-8") : String(req.body);
+    // 1. دریافت بدنه خام به صورت Buffer (بدون تبدیل به String)
+    const rawBodyBuffer = req.body instanceof Buffer ? req.body : Buffer.from(String(req.body));
     
     // 2. هدرها
     const id = headerString(req.headers, "webhook-id");
@@ -83,44 +83,47 @@ export async function polarWebhookHandler(req: Request, res: Response) {
     console.log("ID:", id);
     console.log("TS:", ts);
     console.log("SIG:", sig);
-    console.log("RAW BODY LENGTH:", rawBody.length);
+    console.log("RAW BODY LENGTH:", rawBodyBuffer.length);
+    // چاپ ۵۰ کاراکتر اول بدنه برای اطمینان از اینکه دیتای درست رسیده
+    console.log("RAW BODY START:", rawBodyBuffer.toString("utf8").slice(0, 50));
 
     if (!id || !ts || !sig) {
-      console.error("Missing headers");
       res.status(400).json({ error: "Missing webhook headers" });
       return;
     }
 
-    // 3. محاسبه دستی امضا (بدون استفاده از کتابخونه)
+    // 3. محاسبه امضا کاملاً روی Buffer
     const secret = env.POLAR_WEBHOOK_SECRET.trim();
     const secretWithoutPrefix = secret.startsWith("whsec_") ? secret.slice(6) : secret;
     
     const key = Buffer.from(secretWithoutPrefix, "base64");
-    const signedPayload = `${id}.${ts}.${rawBody}`;
+    
+    // ساخت Payload با Buffer.concat (این روش هیچ بایتی رو تغییر نمیده)
+    const signedPayload = Buffer.concat([
+      Buffer.from(`${id}.${ts}.`),
+      rawBodyBuffer
+    ]);
     
     const expectedSignature = crypto
       .createHmac("sha256", key)
       .update(signedPayload)
       .digest("base64");
 
-    // استخراج بخش امضای دریافتی (حذف v1,)
     const receivedSigPart = sig.startsWith("v1,") ? sig.slice(3) : sig;
 
     console.log("EXPECTED SIG:", expectedSignature);
     console.log("RECEIVED SIG:", receivedSigPart);
 
-    // 4. مقایسه امضاها
     if (expectedSignature !== receivedSigPart) {
       console.error(">>> SIGNATURE MISMATCH <<<");
-      console.error("Make sure you copied the secret from the CORRECT environment (Sandbox/Live) in Polar!");
       res.status(400).json({ error: "Invalid signature" });
       return;
     }
 
     console.log(">>> SIGNATURE VERIFIED SUCCESSFULLY! <<<");
 
-    // 5. پردازش رویداد
-    const event = JSON.parse(rawBody) as {
+    // 4. پردازش رویداد
+    const event = JSON.parse(rawBodyBuffer.toString("utf-8")) as {
       type: string;
       data?: Record<string, unknown>;
     };
