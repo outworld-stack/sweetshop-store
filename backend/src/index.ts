@@ -32,9 +32,13 @@ const rawJson = express.raw({ type: "application/json", limit: "1mb" });
 app.post("/webhooks/clerk", rawJson, (req, res) => {
     void clerkWebhookHandler(req, res);
 });
-app.post("/webhooks/polar", rawJson, (req, res) => {
+app.post(
+  "/webhooks/polar",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  (req, res) => {
     void polarWebhookHandler(req, res);
-});
+  }
+);
 
 app.use(cors({
     origin: "http://localhost:5173",
