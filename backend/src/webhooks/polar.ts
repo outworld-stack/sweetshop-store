@@ -244,14 +244,28 @@ export async function polarWebhookHandler(req: Request, res: Response) {
       return;
     }
 
-    // بدنه خام باید به صورت رشته باشد
-    const rawBody = req.body instanceof Buffer ? req.body.toString("utf-8") : String(req.body);
+    // مهم‌ترین تغییر:
+    // 1. حذف فاصله/خط جدید اضافی
+    // 2. حذف پیشوند whsec_ برای کتابخانه standardwebhooks
+    const secret = env.POLAR_WEBHOOK_SECRET.trim().replace(/^whsec_/, "");
 
-    const wh = new Webhook(env.POLAR_WEBHOOK_SECRET);
+    console.log("secret length after trim/strip:", secret.length);
+    console.log("secret prefix after trim/strip:", secret.slice(0, 6));
+
+    const rawBody =
+      req.body instanceof Buffer
+        ? req.body.toString("utf-8")
+        : String(req.body);
+
+    console.log("raw body first 100 chars:", rawBody.slice(0, 100));
+
+    const wh = new Webhook(secret);
 
     const id = headerString(req.headers, "webhook-id");
     const ts = headerString(req.headers, "webhook-timestamp");
     const sig = headerString(req.headers, "webhook-signature");
+
+    console.log("headers:", { id, ts, sig: sig?.slice(0, 20) });
 
     if (!id || !ts || !sig) {
       console.error("Missing webhook headers", { id, ts, sig });
@@ -274,7 +288,7 @@ export async function polarWebhookHandler(req: Request, res: Response) {
     console.log("event.data.metadata:", event.data?.metadata);
     console.log("event.data.checkout_id:", event.data?.checkout_id);
 
-    // 1) رویداد order.paid
+    // 1) order.paid
     if (event.type === "order.paid" && event.data) {
       const data = event.data;
       const polarOrderId = typeof data.id === "string" ? data.id : undefined;
@@ -333,7 +347,7 @@ export async function polarWebhookHandler(req: Request, res: Response) {
       return;
     }
 
-    // 2) رویداد checkout.updated با وضعیت succeeded
+    // 2) checkout.updated succeeded
     if (
       event.type === "checkout.updated" &&
       event.data &&
@@ -397,7 +411,7 @@ export async function polarWebhookHandler(req: Request, res: Response) {
       return;
     }
 
-    // رویدادهای دیگر
+    // سایر رویدادها
     res.json({ ok: true });
   } catch (error) {
     console.error("polar webhook error", error);
