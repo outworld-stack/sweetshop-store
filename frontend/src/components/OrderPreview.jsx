@@ -1,5 +1,6 @@
 import {  Package } from 'reicon-react';
-import { IK_PRESETS, imageKitOptimizedUrl } from "../lib/imagekitUrl.js";
+import { IK_PRESETS, imageKitOptimizedUrl } from "../lib/imageKitUrl.js";
+
 
 const SIZES = {
   md: "h-[5.5rem] w-[5.5rem]",
