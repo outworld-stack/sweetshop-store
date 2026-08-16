@@ -4,6 +4,7 @@ import { checkoutSessions, orderItems, orders } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { Webhook } from "standardwebhooks";
+import { log } from "node:console";
 
 
 function headerString(headers: Request["headers"], name: string) {
@@ -68,6 +69,12 @@ async function fulfillCheckoutSession(sessionId: string, polarOrderId: string | 
 export async function polarWebhookHandler(req: Request, res: Response) {
     const env = getEnv();
 
+    console.log("=== webhook received ===");
+    console.log("path:", req.path);
+    console.log("headers:", req.headers);
+    console.log("raw body length:", req.body instanceof Buffer ? req.body.length : "not buffer");
+    console.log("raw body snippet:", req.body instanceof Buffer ? req.body.toString("utf-8").slice(0, 200) : String(req.body).slice(0, 200));
+
     try {
         if (!env.POLAR_WEBHOOK_SECRET) {
             res.status(503).send("Polar webhook secret not set");
@@ -75,10 +82,12 @@ export async function polarWebhookHandler(req: Request, res: Response) {
         }
 
         const raw = req.body instanceof Buffer ? req.body : Buffer.from(String(req.body));
-        const wh = new Webhook(Buffer.from(env.POLAR_WEBHOOK_SECRET, 'utf-8').toString("base64"));
+        // const wh = new Webhook(Buffer.from(env.POLAR_WEBHOOK_SECRET, 'utf-8').toString("base64"));
+        const wh = new Webhook(env.POLAR_WEBHOOK_SECRET);
+
 
         const id = headerString(req.headers, "webhook-id");
-        const ts = headerString(req.headers, "webhook-timثstamp");
+        const ts = headerString(req.headers, "webhook-timestamp");
         const sig = headerString(req.headers, "webhook-signature");
 
         if (!id || !ts || !sig) {
@@ -86,7 +95,7 @@ export async function polarWebhookHandler(req: Request, res: Response) {
             return;
         }
 
-        wh.verify(raw, { "webhook-id": id, "webhook-timثstamp": ts, "webhook-signature": sig });
+        wh.verify(raw, { "webhook-id": id, "webhook-timestamp": ts, "webhook-signature": sig });
 
         const event = JSON.parse(raw.toString("utf-8")) as {
             type: string;
@@ -104,6 +113,8 @@ export async function polarWebhookHandler(req: Request, res: Response) {
             }
 
             const sessionId = checkoutSessionIdFromMetadata(data);
+            console.log(sessionId);
+
             if (sessionId) {
                 const ok = await fulfillCheckoutSession(sessionId, polarOrderId, checkoutId);
 
@@ -124,6 +135,10 @@ export async function polarWebhookHandler(req: Request, res: Response) {
                 res.status(500).json({ error: "Checkout fulfillment failed" });
             }
         }
+        const event1 = JSON.parse(raw.toString("utf-8"));
+        console.log("event.type:", event1.type);
+        console.log("event.data.metadata:", event1.data?.metadata);
+        console.log("checkout_id:", event1.data?.checkout_id);
 
         res.json({ ok: true });
 
