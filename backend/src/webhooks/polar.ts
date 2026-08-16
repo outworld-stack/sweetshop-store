@@ -153,6 +153,8 @@ import { checkoutSessions, orderItems, orders } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { Webhook } from "standardwebhooks";
+import crypto from "crypto";
+
 
 function headerString(headers: Request["headers"], name: string) {
   const value = headers[name];
@@ -264,6 +266,15 @@ export async function polarWebhookHandler(req: Request, res: Response) {
     const id = headerString(req.headers, "webhook-id");
     const ts = headerString(req.headers, "webhook-timestamp");
     const sig = headerString(req.headers, "webhook-signature");
+
+    const signedPayload = `${id}.${ts}.${rawBody}`;
+    const expectedSignature = crypto
+      .createHmac("sha256", Buffer.from(secret, "base64"))
+      .update(signedPayload)
+      .digest("base64");
+
+    console.log("expected signature:", expectedSignature);
+    console.log("received signature:", sig);
 
     console.log("headers:", { id, ts, sig: sig?.slice(0, 20) });
 
