@@ -39,7 +39,7 @@ export function OrderPreview({ items, size = "md" }) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-base-300 to-base-200">
-            <PackageIcon
+            <Package
               className={
                 size === "lg" ? "size-12 text-base-content/25" : "size-8 text-base-content/25"
               }
