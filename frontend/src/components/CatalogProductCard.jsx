@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { Plus } from 'reicon-react';
 import { formatPrice } from "../utils/format.js";
-import { IK_PRESETS, imageKitOptimizedUrl } from "../lib/imagekitUrl.js";
+import { IK_PRESETS, imageKitOptimizedUrl } from "../lib/imageKitUrl.js";
 import { useCart } from "../store/cart.js";
 
 export function CatalogProductCard({ product }) {
