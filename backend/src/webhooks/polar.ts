@@ -248,8 +248,8 @@ export async function polarWebhookHandler(req: Request, res: Response) {
     }
 
     res.json({ ok: true });
-  } catch (error) {
-    console.error("polar webhook error", error);
-    res.status(400).json({ error: "Invalid webhook" });
-  }
+  }  catch (error) {
+    console.error("polar webhook error", error instanceof Error ? error.stack : error);
+    res.status(400).json({ error: "Invalid webhook", message: error instanceof Error ? error.message : "unknown" });
+}
 }
