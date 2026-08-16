@@ -78,7 +78,7 @@ export async function polarWebhookHandler(req: Request, res: Response) {
         const wh = new Webhook(Buffer.from(env.POLAR_WEBHOOK_SECRET, 'utf-8').toString("base64"));
 
         const id = headerString(req.headers, "webhook-id");
-        const ts = headerString(req.headers, "webhook-tiemstamp");
+        const ts = headerString(req.headers, "webhook-timثstamp");
         const sig = headerString(req.headers, "webhook-signature");
 
         if (!id || !ts || !sig) {
@@ -86,7 +86,7 @@ export async function polarWebhookHandler(req: Request, res: Response) {
             return;
         }
 
-        wh.verify(raw, { "webhook-id": id, "webhook-tiemstamp": ts, "webhook-signature": sig });
+        wh.verify(raw, { "webhook-id": id, "webhook-timثstamp": ts, "webhook-signature": sig });
 
         const event = JSON.parse(raw.toString("utf-8")) as {
             type: string;
