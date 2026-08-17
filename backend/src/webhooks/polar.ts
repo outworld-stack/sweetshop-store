@@ -36,7 +36,11 @@ async function fulfillCheckoutSession(
 ) {
   return await db.transaction(async (tx) => {
     const [session] = await tx.select().from(checkoutSessions).where(eq(checkoutSessions.id, sessionId)).for("update");
-    if (!session) return false;
+
+    if (!session) {
+      console.log("Session already processed or not found, skipping.");
+      return true; // چون قبلا پردازش شده، به پولار میگیم همه چیز اوکیه
+    }
 
     const [order] = await tx.insert(orders).values({
       userId: session.userId,
@@ -73,7 +77,7 @@ export async function polarWebhookHandler(req: Request, res: Response) {
 
     // 1. دریافت بدنه خام به صورت Buffer (بدون تبدیل به String)
     const rawBodyBuffer = req.body instanceof Buffer ? req.body : Buffer.from(String(req.body));
-    
+
     // 2. هدرها
     const id = headerString(req.headers, "webhook-id");
     const ts = headerString(req.headers, "webhook-timestamp");
@@ -95,15 +99,15 @@ export async function polarWebhookHandler(req: Request, res: Response) {
     // 3. محاسبه امضا کاملاً روی Buffer
     const secret = env.POLAR_WEBHOOK_SECRET.trim();
     const secretWithoutPrefix = secret.startsWith("whsec_") ? secret.slice(6) : secret;
-    
+
     const key = Buffer.from(secretWithoutPrefix, "base64");
-    
+
     // ساخت Payload با Buffer.concat (این روش هیچ بایتی رو تغییر نمیده)
     const signedPayload = Buffer.concat([
       Buffer.from(`${id}.${ts}.`),
       rawBodyBuffer
     ]);
-    
+
     const expectedSignature = crypto
       .createHmac("sha256", key)
       .update(signedPayload)
